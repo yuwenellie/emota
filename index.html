@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Input Diagnosis</title>
+    <script>
+        // Function to translate text
+        async function translateText() {
+            const textInput = document.getElementById('textInput').value;
+            const languageSelect = document.getElementById('languageSelect').value;
+            const response = await fetch('/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: textInput, language: languageSelect }),
+            });
+
+            const result = await response.json();
+            document.getElementById('result').innerText = response.ok
+                ? `Original: ${result.original_text}\nTranslated: ${result.translated_text}\nLanguage: ${result.language}`
+                : `Error: ${result.error}`;
+        }
+
+        // Function to start speech recognition
+        function startDictation() {
+            if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+                const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.lang = 'en-US';
+                recognition.interimResults = false;
+
+                recognition.onresult = event => {
+                    const text = event.results[0][0].transcript;
+                    document.getElementById('textInput').value = text;
+                    translateText();
+                };
+
+                recognition.onerror = event => {
+                    console.error('Speech recognition error', event);
+                };
+
+                recognition.start();
+            } else {
+                alert('Your browser does not support speech recognition.');
+            }
+        }
+
+        async function analyzeLastText() {
+    const response = await fetch('/analyze-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+    });
+
+    const result = await response.json();
+    document.getElementById('analysisResult').innerText = response.ok
+        ? Object.entries(result).map(([sentence, details]) =>
+            `${sentence} ${details.emoji}`).join('\n')
+        : `Error: ${result.error}`;
+}
+
+
+        async function generateStory() {
+            const response = await fetch('/generate-story', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                document.getElementById('storyResult').innerText = result.story;
+                const imageContainer = document.getElementById('imageContainer');
+                imageContainer.innerHTML = '';
+                result.images.forEach(url => {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    imageContainer.appendChild(img);
+                });
+            }
+        }
+
+
+    </script>
+</head>
+<body>
+<h1>Emota</h1>
+
+<h2></h2>
+<button onclick="startDictation()">Start Talking</button>
+
+<h2></h2>
+<textarea id="textInput" rows="4" cols="50" placeholder="Enter text to translate..."></textarea><br>
+<select id="languageSelect">
+    <option value="en">English</option>
+    <option value="es">Spanish</option>
+    <option value="fr">French</option>
+    <option value="de">German</option>
+    <option value="zh-CN">Chinese (Simplified)</option>
+</select><br>
+<button onclick="translateText()">Translate</button>
+
+<h2>Translation Result:</h2>
+<pre id="result"></pre>
+
+<h2>Hmm...</h2>
+<button onclick="analyzeLastText()">Analyze Text</button>
+<pre id="analysisResult"></pre>
+
+<h2>Which artist do you vibe with?</h2>
+<button onclick="generateStory()">Generate Story</button>
+<pre id="storyResult"></pre>
+
+<h2>Artist's Paintings:</h2>
+<div id="imageContainer"></div>
+</body>
+</html>
